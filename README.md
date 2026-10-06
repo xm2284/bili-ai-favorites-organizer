@@ -26,6 +26,10 @@
 
 > 点上方按钮安装（需先装 [Tampermonkey](https://www.tampermonkey.net/) 油猴扩展）。
 
+<p align="center">
+  <b>⭐ 如果这个工具帮到了你，欢迎点个 <a href="https://github.com/xm2284/bili-ai-favorites-organizer">Star</a> 支持一下～</b>
+</p>
+
 ---
 
 ## 📌 与原版相比，新增/改进了什么？
