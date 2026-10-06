@@ -1,0 +1,396 @@
+<script lang="ts">
+  import { X, Settings, Moon, Sun } from 'lucide-svelte';
+  import { isDark, toggleTheme } from '$stores/theme';
+  import { ripple } from '$actions/ripple';
+  import { magnetic } from '$actions/magnetic';
+  import { pressEffect } from '$animations/micro';
+
+  const headerMagnetic = { radius: 60, strength: 0.4 };
+  import { gsap, EASINGS, shouldAnimate } from '$animations/gsap-config';
+  import { Z_INDEX } from '$utils/constants';
+  import { onDestroy, onMount } from 'svelte';
+
+  interface Props {
+    settingsOpen?: boolean;
+    onclose?: () => void;
+  }
+
+  let { settingsOpen = $bindable(false), onclose }: Props = $props();
+
+  let themeIconEl = $state<HTMLButtonElement>(undefined!);
+  let headerTitleEl = $state<HTMLDivElement>(undefined!);
+  let headerActionsEl = $state<HTMLDivElement>(undefined!);
+  let themeIconTween: gsap.core.Tween | null = null;
+  let entranceTweens: gsap.core.Tween[] = [];
+  let transitionTimer: ReturnType<typeof setTimeout> | null = null;
+
+  onMount(() => {
+    if (!shouldAnimate()) return;
+    // Title slide-in from left
+    if (headerTitleEl) {
+      entranceTweens.push(gsap.fromTo(headerTitleEl,
+        { opacity: 0, x: -10 },
+        { opacity: 1, x: 0, duration: 0.35, ease: 'power2.out' }
+      ));
+    }
+    // Buttons stagger entrance
+    if (headerActionsEl) {
+      const btns = headerActionsEl.querySelectorAll('.header-btn');
+      if (btns.length) {
+        entranceTweens.push(gsap.fromTo(btns,
+          { opacity: 0, scale: 0.8, y: 4 },
+          { opacity: 1, scale: 1, y: 0, duration: 0.3, stagger: 0.08, ease: EASINGS.prismBounce, delay: 0.15 }
+        ));
+      }
+    }
+  });
+
+  onDestroy(() => {
+    if (transitionTimer) clearTimeout(transitionTimer);
+    themeIconTween?.kill();
+    entranceTweens.forEach(t => t.kill());
+  });
+
+  /** J1 圆形揭示 + J2 图标旋转 + J3 色彩插值 */
+  function handleThemeToggle() {
+    if (!shouldAnimate()) {
+      toggleTheme();
+      return;
+    }
+
+    // J3: 快照切换前的背景色 (用于遮罩层)
+    const appEl = document.querySelector('.bfao-app') as HTMLElement | null;
+    const oldBg = appEl
+      ? getComputedStyle(appEl).getPropertyValue('--ai-bg').trim()
+      : '';
+
+    // 切换主题 (App.svelte 的 data-theme 会立即响应更新)
+    toggleTheme();
+
+    // J2: 主题图标旋转动画 — 快速连续点击时先终止前一个动画
+    if (themeIconEl) {
+      themeIconTween?.kill();
+      themeIconTween = gsap.fromTo(themeIconEl,
+        { rotation: 0, scale: 1 },
+        { rotation: 360, scale: 1, duration: 0.5, ease: EASINGS.prismBounce }
+      );
+    }
+
+    if (!appEl || !oldBg) return;
+
+    // J1: 柔和渐隐过渡 — 旧主题背景色覆盖层淡出
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: ${Z_INDEX.PARTICLE};
+      background: ${oldBg};
+      pointer-events: none;
+    `;
+    document.body.appendChild(overlay);
+
+    gsap.to(overlay, {
+      opacity: 0,
+      duration: 0.4,
+      ease: 'power2.out',
+      onComplete: () => overlay.remove(),
+    });
+
+    // J3: 面板内元素的 CSS 变量色彩过渡
+    const panelEl = appEl.querySelector('.panel') as HTMLElement | null;
+    if (panelEl) {
+      panelEl.style.transition = 'background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease';
+      if (transitionTimer) clearTimeout(transitionTimer);
+      transitionTimer = setTimeout(() => { panelEl.style.transition = ''; transitionTimer = null; }, 600);
+    }
+  }
+</script>
+
+<div class="header">
+  <div class="header-title" bind:this={headerTitleEl}>
+    <span>「小明」AI B站收藏夹智能整理器</span>
+    <span class="version">v2.1</span>
+  </div>
+
+  <div class="header-actions" bind:this={headerActionsEl}>
+    <button
+      class="header-btn"
+      bind:this={themeIconEl}
+      onclick={handleThemeToggle}
+      title={$isDark ? '切换到亮色模式' : '切换到暗色模式'}
+      use:ripple={{ color: 'rgba(255,255,255,0.25)' }}
+      use:pressEffect use:magnetic={headerMagnetic}
+    >
+      {#if $isDark}
+        <Sun size={16} />
+      {:else}
+        <Moon size={16} />
+      {/if}
+    </button>
+
+    <button
+      class="header-btn"
+      class:active={settingsOpen}
+      title="设置"
+      onclick={() => (settingsOpen = !settingsOpen)}
+      use:ripple={{ color: 'rgba(255,255,255,0.25)' }}
+      use:pressEffect use:magnetic={headerMagnetic}
+    >
+      <span class="settings-icon" class:open={settingsOpen}>
+        <Settings size={16} />
+      </span>
+    </button>
+
+    <button
+      class="header-btn"
+      onclick={() => onclose?.()}
+      title="关闭"
+      use:ripple={{ color: 'rgba(255,255,255,0.25)' }}
+      use:pressEffect use:magnetic={headerMagnetic}
+    >
+      <X size={16} />
+    </button>
+  </div>
+</div>
+
+<style>
+  .header {
+    background: linear-gradient(135deg, var(--ai-primary), var(--ai-gradient-accent), var(--ai-primary));
+    background-size: 400% 400%;
+    animation: aurora-flow 18s ease-in-out infinite;
+    color: #fff;
+    padding: 16px 18px;
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    border-top-left-radius: 28px;
+    border-top-right-radius: 28px;
+    cursor: grab;
+  }
+
+  .header::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 6px;
+    width: 18px;
+    height: 6px;
+    transform: translateX(-50%);
+    background:
+      radial-gradient(circle, rgba(255, 255, 255, 0.25) 1px, transparent 1px);
+    background-size: 6px 4px;
+    opacity: 0.4;
+    transition: opacity 0.25s ease, width 0.3s cubic-bezier(0.2, 0.98, 0.28, 1);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .header:hover::before {
+    opacity: 0.7;
+    width: 28px;
+  }
+
+  .header:active {
+    cursor: grabbing;
+  }
+
+  .header:active::before {
+    opacity: 1;
+    width: 36px;
+  }
+
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .header-title > span:first-child {
+    background: linear-gradient(
+      90deg,
+      #fff 0%, #fff 40%,
+      rgba(255, 255, 255, 0.5) 50%,
+      #fff 60%, #fff 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: titleShimmer 6s ease-in-out infinite, titleGlow 6s ease-in-out infinite;
+    letter-spacing: 0;
+    transition: letter-spacing 0.4s cubic-bezier(0.2, 0.98, 0.28, 1);
+  }
+
+  .header-title > span:first-child:hover {
+    letter-spacing: 0.06em;
+  }
+
+  .version {
+    font-size: 10px;
+    opacity: 0.7;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 1px 6px;
+    border-radius: 8px;
+    animation: versionPop 0.4s cubic-bezier(0.2, 1, 0.4, 1) both;
+    transition: transform 0.25s ease, opacity 0.25s ease, letter-spacing 0.3s ease, box-shadow 0.25s ease;
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .version::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.25) 50%, transparent 65%);
+    animation: versionShimmer 4s ease-in-out 1s infinite;
+    pointer-events: none;
+  }
+
+  .version:hover {
+    transform: scale(1.08);
+    opacity: 0.95;
+    letter-spacing: 0.03em;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Button group hover connector line */
+  .header-actions::before {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 4px;
+    right: 4px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    transform: scaleX(0);
+    transition: transform 0.3s cubic-bezier(0.2, 0.98, 0.28, 1);
+    pointer-events: none;
+  }
+
+  .header-actions:hover::before {
+    transform: scaleX(1);
+  }
+
+  .header-btn {
+    padding: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+  }
+
+  .header-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  .header-btn.active {
+    background: rgba(255, 255, 255, 0.35);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.15);
+    position: relative;
+  }
+
+  /* Active state dot indicator beneath the button */
+  .header-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+    transform: translateX(-50%);
+    animation: dotPop 0.3s cubic-bezier(0.2, 0.98, 0.28, 1) both;
+  }
+
+  @keyframes dotPop {
+    from { transform: translateX(-50%) scale(0); }
+    to { transform: translateX(-50%) scale(1); }
+  }
+
+  /* Close button hover — X turns reddish to signal destructive action */
+  .header-btn:last-child:hover {
+    background: rgba(239, 68, 68, 0.3);
+  }
+
+  .header-btn:last-child :global(svg) {
+    transition: transform 0.3s cubic-bezier(0.2, 0.98, 0.28, 1);
+  }
+
+  .header-btn:last-child:hover :global(svg) {
+    transform: rotate(90deg);
+  }
+
+  .settings-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.5s cubic-bezier(0.2, 1, 0.4, 1);
+  }
+
+  .settings-icon.open {
+    transform: rotate(180deg);
+  }
+
+  @keyframes aurora-flow {
+    0%, 100% { background-position: 0% 50%; }
+    25% { background-position: 100% 25%; }
+    50% { background-position: 50% 100%; }
+    75% { background-position: 0% 75%; }
+  }
+
+  @keyframes titleShimmer {
+    0%, 100% { background-position: 200% 0; }
+    50% { background-position: -200% 0; }
+  }
+
+  @keyframes titleGlow {
+    0%, 35%, 65%, 100% { text-shadow: none; }
+    50% { text-shadow: var(--ai-glow-title); }
+  }
+
+  @keyframes versionPop {
+    0% { transform: scale(0); opacity: 0; }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 0.7; }
+  }
+
+  @keyframes versionShimmer {
+    0%, 100% { transform: translateX(-100%); }
+    50% { transform: translateX(100%); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .header-title > span:first-child { animation: none; -webkit-text-fill-color: #fff; transition: none; text-shadow: none; }
+    .header-title > span:first-child:hover { letter-spacing: 0; }
+    .header::before { display: none; }
+    .version { animation: none; transition: none; }
+    .version::after { animation: none; display: none; }
+    .version:hover { transform: none; letter-spacing: 0; box-shadow: none; }
+    .settings-icon { transition: none; }
+    .header-btn.active { box-shadow: none; }
+    .header-btn.active::after { animation: none; }
+    .header-actions::before { display: none; }
+    .header-btn:last-child :global(svg) { transition: none; }
+    .header-btn:last-child:hover :global(svg) { transform: none; }
+  }
+</style>

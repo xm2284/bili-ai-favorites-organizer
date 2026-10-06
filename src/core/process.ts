@@ -1,0 +1,527 @@
+﻿import type { Settings, BiliData, VideoResource, CategoryResult } from '$types/index';
+import { get } from 'svelte/store';
+import {
+  isRunning, cancelRequested, logs,
+  progressStartTime, resetTokenUsage, tokenUsage,
+} from '$stores/state';
+import {
+  getAllFoldersWithIds, getMyFolders,
+  createFolder, moveVideos, copyVideos, fetchAllVideos, invalidateFolderCache,
+} from '$api/bilibili';
+import { callAI } from '$api/ai-client';
+import { buildSystemPrompt } from '$api/ai-prompt';
+import { classifyLocally } from '$core/local-classify';
+import { estimateCost, formatTokenCount } from '$api/ai-providers';
+import { folderSelect, requestPreviewConfirm } from '$stores/modal-bridge';
+import { isDeadVideo } from '$utils/dom';
+import { humanDelay, createConcurrencyLimiter, formatNow } from '$utils/timing';
+import { gmSetValue, gmGetValue } from '$utils/gm';
+import { saveUndoData, type UndoRecord } from '$core/undo';
+import { saveHistoryEntry } from '$core/history';
+import { getErrorMessage } from '$utils/errors';
+import { groupBy } from '$utils/collections';
+import { UNCATEGORIZED_FOLDER, DEAD_ARCHIVE_FOLDER, DEFAULT_VIDEO_TYPE, DEFAULT_FOLDER_TITLE } from '$utils/constants';
+import { updateProgress, resetProgress } from '$utils/progress';
+
+// ================= Helpers =================
+
+type CancelCheck = () => boolean;
+
+// ================= Phase 1: Resolve source folders =================
+
+async function resolveSourceFolders(
+  biliData: BiliData,
+): Promise<number[]> {
+  // 跨收藏夹为默认行为：始终弹出选择器
+  const allFolders = await getAllFoldersWithIds(biliData);
+  logs.add('请在弹出的面板中选择要整理的收藏夹...', 'info');
+  const ids = await folderSelect.request(allFolders);
+  if (ids.length === 0) throw new Error('未选择任何收藏夹');
+  return ids;
+}
+
+// ================= Phase 2: Fetch videos from source folders =================
+
+interface FetchResult {
+  allVideos: VideoResource[];
+  videoSourceMap: Map<number, number>;
+}
+
+async function fetchSourceVideos(
+  sourceMediaIds: number[],
+  settings: Settings,
+  isCancelled: CancelCheck,
+): Promise<FetchResult> {
+  const allVideos: VideoResource[] = [];
+  const videoSourceMap: Map<number, number> = new Map();
+  const maxVideos = settings.limitEnabled ? settings.limitCount : undefined;
+
+  let previouslyFetched = 0;
+
+  for (const mediaId of sourceMediaIds) {
+    if (isCancelled()) break;
+    if (maxVideos && allVideos.length >= maxVideos) break;
+
+    const remaining = maxVideos ? maxVideos - allVideos.length : undefined;
+    logs.add(`正在抓取收藏夹 ${mediaId}...`, 'info');
+    const videos = await fetchAllVideos(
+      mediaId,
+      settings.fetchDelay,
+      isCancelled,
+      (fetchedInFolder, totalInFolder) => {
+        updateProgress(
+          'fetch',
+          previouslyFetched + fetchedInFolder,
+          previouslyFetched + totalInFolder,
+        );
+      },
+      remaining,
+    );
+
+    let validVideos = videos;
+
+    if (settings.incrementalMode) {
+      const lastRunTime = gmGetValue('bfao_lastRunTime', 0);
+      if (lastRunTime > 0) {
+        const before = validVideos.length;
+        validVideos = validVideos.filter((v) => v.fav_time > lastRunTime);
+        logs.add(`增量模式：${before} → ${validVideos.length} 个新视频`, 'info');
+      }
+    }
+
+    for (const v of validVideos) {
+      videoSourceMap.set(v.id, mediaId);
+    }
+    allVideos.push(...validVideos);
+    previouslyFetched = allVideos.length;
+  }
+  // Mark fetch phase complete
+  updateProgress('fetch', allVideos.length, allVideos.length);
+
+  return { allVideos, videoSourceMap };
+}
+
+// ================= Phase 3: AI classification =================
+
+async function classifyWithAI(
+  allVideos: VideoResource[],
+  existingFolderNames: string[],
+  settings: Settings,
+  isCancelled: CancelCheck,
+): Promise<CategoryResult> {
+  const allCategories: CategoryResult = {};
+  const systemPrompt = buildSystemPrompt(existingFolderNames, settings.lastPrompt, settings.allowNewCategories);
+  const concurrency = Math.max(1, Math.min(10, settings.aiConcurrency));
+  const chunkSize = Math.max(1, settings.aiChunkSize);
+  const limiter = createConcurrencyLimiter(concurrency);
+
+  const chunks: VideoResource[][] = [];
+  for (let i = 0; i < allVideos.length; i += chunkSize) {
+    chunks.push(allVideos.slice(i, i + chunkSize));
+  }
+
+  const totalAiCalls = chunks.length;
+  let aiCompleted = 0;
+  let aiFailed = 0;
+
+  // Initialize AI phase progress immediately
+  updateProgress('ai', 0, totalAiCalls);
+  logs.add(`分为 ${totalAiCalls} 批次，并发 ${concurrency}`, 'info');
+
+  const aiPromises: Promise<void>[] = [];
+
+  for (let ci = 0; ci < chunks.length; ci++) {
+    if (isCancelled()) break;
+
+    const chunk = chunks[ci];
+    const idx = ci + 1;
+
+    const videoData = chunk.map((v) => ({
+      id: v.id,
+      type: v.type ?? DEFAULT_VIDEO_TYPE,
+      title: v.title,
+      up: v.upper?.name ?? '',
+      intro: (v.intro || '').slice(0, 60),
+      play: v.cnt_info?.play ?? 0,
+      duration: v.duration ?? 0,
+    }));
+
+    const combinedPrompt = {
+      system: systemPrompt,
+      user: `以下是待处理的 ${chunk.length} 个视频：\n${JSON.stringify(videoData)}`,
+    };
+
+    const p = limiter.run(async () => {
+      try {
+        logs.add(`AI 批次 ${idx}/${totalAiCalls} 处理中...`, 'info');
+        const aiResult = await callAI(combinedPrompt, settings);
+
+        if (aiResult?.categories && Object.keys(aiResult.categories).length > 0) {
+          for (const [catName, vids] of Object.entries(aiResult.categories)) {
+            if (!allCategories[catName]) allCategories[catName] = [];
+            allCategories[catName].push(...vids);
+          }
+        } else {
+          logs.add(`AI 批次 ${idx} 返回空分类结果 (${chunk.length} 个视频未被分类)`, 'warning');
+        }
+
+        aiCompleted++;
+        updateProgress('ai', aiCompleted, totalAiCalls);
+        logs.add(`AI 批次 ${idx} 完成`, 'success');
+      } catch (err: unknown) {
+        aiCompleted++;
+        aiFailed++;
+        updateProgress('ai', aiCompleted, totalAiCalls);
+        logs.add(`AI 批次 ${idx} 失败: ${getErrorMessage(err)}`, 'error');
+      }
+    });
+
+    aiPromises.push(p);
+  }
+
+  await Promise.all(aiPromises);
+
+  if (aiFailed > 0) {
+    logs.add(`AI 分类汇总: ${totalAiCalls - aiFailed}/${totalAiCalls} 批次成功，${aiFailed} 批次失败`, aiFailed === totalAiCalls ? 'error' : 'warning');
+  }
+
+  return allCategories;
+}
+
+// ================= Phase 4: Post-process categories =================
+
+function postProcessCategories(
+  allCategories: CategoryResult,
+  allVideos: VideoResource[],
+  existingFoldersMap: Record<string, number>,
+): CategoryResult {
+  // Deduplicate within and across categories
+  const assignedIds = new Set<string>();
+  for (const catName of Object.keys(allCategories)) {
+    const vids = allCategories[catName];
+    const seen = new Set<string>();
+    allCategories[catName] = vids.filter((v) => {
+      const key = `${v.id}:${v.type}`;
+      if (seen.has(key) || assignedIds.has(key)) return false;
+      seen.add(key);
+      assignedIds.add(key);
+      return true;
+    });
+  }
+
+  // Detect missed videos
+  const missedVideos = allVideos.filter(
+    (v) => !assignedIds.has(`${v.id}:${v.type}`),
+  );
+  if (missedVideos.length > 0) {
+    logs.add(`发现 ${missedVideos.length} 个遗漏视频，归入「未分类」`, 'warning');
+    allCategories[UNCATEGORIZED_FOLDER] = missedVideos.map((v) => ({
+      id: v.id,
+      type: v.type,
+      conf: 0.3,
+    }));
+  }
+
+  // Merge tiny categories
+  const tinyCats = Object.entries(allCategories).filter(
+    ([name, vids]) =>
+      vids.length === 1 &&
+      !existingFoldersMap[name] &&
+      name !== UNCATEGORIZED_FOLDER,
+  );
+  if (tinyCats.length >= 3) {
+    logs.add(`合并 ${tinyCats.length} 个碎片分类`, 'info');
+    if (!allCategories[UNCATEGORIZED_FOLDER]) allCategories[UNCATEGORIZED_FOLDER] = [];
+    for (const [name, vids] of tinyCats) {
+      allCategories[UNCATEGORIZED_FOLDER].push(...vids);
+      delete allCategories[name];
+    }
+  }
+
+  return allCategories;
+}
+
+// ================= Phase 5: Move videos to folders =================
+
+async function moveVideosToFolders(
+  allCategories: CategoryResult,
+  existingFoldersMap: Record<string, number>,
+  videoSourceMap: Map<number, number>,
+  sourceMediaIds: number[],
+  allVideos: VideoResource[],
+  settings: Settings,
+  biliData: BiliData,
+  isCancelled: CancelCheck,
+): Promise<{ undoMoves: UndoRecord['moves']; failedCount: number }> {
+  invalidateFolderCache();
+  const entries = Object.entries(allCategories);
+  const totalMoveVideos = Object.values(allCategories).reduce((s, v) => s + v.length, 0);
+  let moveIdx = 0;
+  let failedCount = 0;
+  const undoMoves: UndoRecord['moves'] = [];
+
+  // 默认收藏夹保护：找到默认收藏夹 id，来源为它时用「复制」而非「移动」
+  let defaultFolderId: number | null = null;
+  if (settings.keepDefaultFolder) {
+    try {
+      const allFolders = await getAllFoldersWithIds(biliData);
+      const def = allFolders.find((f) => f.title === DEFAULT_FOLDER_TITLE);
+      if (def) defaultFolderId = def.id;
+      if (defaultFolderId) {
+        logs.add(`已开启「保留默认收藏夹」：默认夹中的视频将复制到新分类，默认夹保持不动`, 'info');
+      }
+    } catch {
+      /* 忽略，退化为移动 */
+    }
+  }
+
+  // Initialize move phase progress
+  updateProgress('move', 0, totalMoveVideos);
+
+  for (const [categoryName, vids] of entries) {
+    if (isCancelled()) break;
+
+    let targetFolderId = existingFoldersMap[categoryName];
+
+    // Fuzzy match
+    if (!targetFolderId) {
+      const fuzzyKey = Object.keys(existingFoldersMap).find(
+        (k) => k.trim().toLowerCase() === categoryName.trim().toLowerCase(),
+      );
+      if (fuzzyKey) targetFolderId = existingFoldersMap[fuzzyKey];
+    }
+
+    // Create new folder
+    if (!targetFolderId) {
+      try {
+        targetFolderId = await createFolder(categoryName, biliData);
+        existingFoldersMap[categoryName] = targetFolderId;
+      } catch (e: unknown) {
+        logs.add(`创建收藏夹「${categoryName}」失败: ${getErrorMessage(e)}`, 'error');
+        continue;
+      }
+    }
+
+    // Move in chunks (floor guard: 0 → 1 prevents infinite loop)
+    const moveChunk = Math.max(1, settings.moveChunkSize);
+    for (let i = 0; i < vids.length; i += moveChunk) {
+      if (isCancelled()) break;
+
+      const chunk = vids.slice(i, i + moveChunk);
+
+      // Group by source
+      const bySource = groupBy(chunk, (v) => videoSourceMap.get(v.id) ?? sourceMediaIds[0]);
+
+      for (const [from, subChunk] of bySource) {
+        const resourcesStr = subChunk
+          .map((v) => `${v.id}:${v.type}`)
+          .join(',');
+
+        // 来源是默认收藏夹且开启保护 → 复制（默认夹保留）；否则移动
+        const useCopy = defaultFolderId !== null && from === defaultFolderId;
+        const success = useCopy
+          ? await copyVideos(from, targetFolderId, resourcesStr, biliData)
+          : await moveVideos(from, targetFolderId, resourcesStr, biliData);
+
+        if (success) {
+          moveIdx += subChunk.length;
+          updateProgress('move', moveIdx, allVideos.length);
+          // 复制不写入撤销记录（默认夹原视频仍在，无需回滚）
+          if (!useCopy) {
+            undoMoves.push({
+              fromMediaId: from,
+              toMediaId: targetFolderId,
+              resources: resourcesStr,
+              count: subChunk.length,
+            });
+          }
+        } else {
+          failedCount += subChunk.length;
+          logs.add(
+            `${useCopy ? '复制' : '移动'}到「${categoryName}」部分失败 (${subChunk.length} 个视频)`,
+            'warning',
+          );
+        }
+
+        await humanDelay(settings.writeDelay);
+      }
+    }
+  }
+
+  return { undoMoves, failedCount };
+}
+
+// ================= Phase 6: Final report =================
+
+function emitFinalReport(
+  allVideos: VideoResource[],
+  allCategories: CategoryResult,
+  sourceMediaIds: number[],
+  undoMoves: UndoRecord['moves'],
+  failedCount: number,
+  settings: Settings,
+) {
+  const elapsed = Date.now() - get(progressStartTime);
+  const elapsedStr =
+    elapsed > 60000
+      ? `${(elapsed / 60000).toFixed(1)} 分钟`
+      : `${(elapsed / 1000).toFixed(1)} 秒`;
+
+  logs.add(
+    `整理完成！共处理 ${allVideos.length} 个视频，${Object.keys(allCategories).length} 个分类，耗时 ${elapsedStr}`,
+    'success',
+  );
+
+  // 完成后的感谢提示
+  const thanks =
+    '整理完成，感谢使用！\n' +
+    '收藏夹不是用来吃灰的，分类好后也记得常来看看～\n' +
+    'QQ：2284517861 · 祝你万事顺利！';
+  logs.add('感谢使用！有问题欢迎反馈 QQ：2284517861', 'success');
+  (window as unknown as { __bfao_toast?: (m: string, t?: string, d?: number) => void })
+    .__bfao_toast?.(thanks, 'success', 10000);
+
+  if (failedCount > 0) {
+    logs.add(`${failedCount} 个视频移动失败，请检查日志`, 'warning');
+  }
+
+  const usage = get(tokenUsage);
+  if (usage.totalTokens > 0) {
+    logs.add(
+      `Token 用量: ${formatTokenCount(usage.promptTokens)} 输入 + ${formatTokenCount(usage.completionTokens)} 输出`,
+      'info',
+    );
+    const cost = estimateCost(settings.modelName);
+    if (cost) logs.add(`预估费用: ${cost}`, 'info');
+  }
+
+  if (undoMoves.length > 0) {
+    const { time, timeLocal } = formatNow();
+    saveUndoData({
+      time,
+      timeLocal,
+      totalVideos: allVideos.length,
+      totalCategories: Object.keys(allCategories).length,
+      sourceMediaIds,
+      moves: undoMoves,
+    });
+  }
+
+  saveHistoryEntry({
+    time: formatNow().timeLocal,
+    videoCount: allVideos.length,
+    categoryCount: Object.keys(allCategories).length,
+    categories: Object.keys(allCategories).join(', '),
+  });
+
+  gmSetValue('bfao_lastRunTime', Math.floor(Date.now() / 1000));
+}
+
+// ================= Main Orchestrator =================
+
+export async function startProcess(settings: Settings, biliData: BiliData): Promise<void> {
+  if (get(isRunning)) {
+    logs.add('已有整理任务在运行中', 'warning');
+    return;
+  }
+
+  isRunning.set(true);
+  cancelRequested.set(false);
+  resetTokenUsage();
+  progressStartTime.set(Date.now());
+
+  const isCancelled = () => get(cancelRequested);
+
+  try {
+    // Phase 1: Resolve source folders
+    const sourceMediaIds = await resolveSourceFolders(biliData);
+    logs.add(`开始整理 ${sourceMediaIds.length} 个收藏夹`, 'info');
+
+    // Phase 2: Get existing folders
+    const existingFoldersMap = await getMyFolders(biliData);
+    const existingFolderNames = Object.keys(existingFoldersMap);
+    logs.add(`已有 ${existingFolderNames.length} 个收藏夹`, 'info');
+
+    // Phase 3: Fetch videos
+    const { allVideos, videoSourceMap } = await fetchSourceVideos(
+      sourceMediaIds, settings, isCancelled,
+    );
+
+    if (isCancelled()) { logs.add('用户取消了操作', 'warning'); return; }
+    if (allVideos.length === 0) { logs.add('没有需要整理的视频', 'info'); return; }
+
+    // Safety: enforce limit (primary limit is in fetchSourceVideos)
+    const videosToProcess = (settings.limitEnabled && allVideos.length > settings.limitCount)
+      ? allVideos.slice(0, settings.limitCount)
+      : allVideos;
+
+    // Phase 3.6: Separate dead videos (auto-archive, skip AI)
+    const deadVideos = videosToProcess.filter(v => isDeadVideo(v));
+    const liveVideos = videosToProcess.filter(v => !isDeadVideo(v));
+    if (deadVideos.length > 0) {
+      logs.add(`检测到 ${deadVideos.length} 个失效视频，将自动归档`, 'info');
+    }
+
+    logs.add(`共 ${liveVideos.length} 个视频待分类`, 'success');
+
+    // Phase 4: Classification (AI 大模型 或 本地规则)
+    let allCategories: CategoryResult;
+    if (settings.classifyMode === 'local') {
+      logs.add('当前为【本地规则分类】模式，无需联网与 API Key', 'info');
+      allCategories = classifyLocally(liveVideos, settings.localRules);
+      logs.add(`本地规则分类完成: ${Object.keys(allCategories).length} 个分类`, 'success');
+    } else {
+      allCategories = await classifyWithAI(
+        liveVideos, existingFolderNames, settings, isCancelled,
+      );
+    }
+
+    // Merge dead videos into archive category
+    if (deadVideos.length > 0) {
+      allCategories[DEAD_ARCHIVE_FOLDER] = [
+        ...(allCategories[DEAD_ARCHIVE_FOLDER] ?? []),
+        ...deadVideos.map(v => ({ id: v.id, type: v.type })),
+      ];
+    }
+
+    if (isCancelled()) { logs.add('用户取消了操作', 'warning'); return; }
+    if (Object.keys(allCategories).length === 0) {
+      logs.add('未得到任何分类结果', 'error');
+      return;
+    }
+
+    // Phase 4.5: Post-process
+    allCategories = postProcessCategories(allCategories, liveVideos, existingFoldersMap);
+
+    logs.add(
+      `分类完成: ${Object.keys(allCategories).length} 个分类，${videosToProcess.length} 个视频`,
+      'success',
+    );
+
+    // Phase 5: Preview & confirm
+    logs.add(
+      `分类结果: ${Object.entries(allCategories)
+        .map(([k, v]) => `${k}(${v.length})`)
+        .join(', ')}`,
+      'info',
+    );
+    logs.add('请在弹出的面板中确认分类结果...', 'info');
+    allCategories = await requestPreviewConfirm(allCategories, videosToProcess, existingFolderNames);
+
+    if (isCancelled()) throw new Error('用户取消操作');
+
+    // Phase 6: Move videos
+    const { undoMoves, failedCount } = await moveVideosToFolders(
+      allCategories, existingFoldersMap, videoSourceMap,
+      sourceMediaIds, allVideos, settings, biliData, isCancelled,
+    );
+
+    // Phase 7: Report
+    emitFinalReport(allVideos, allCategories, sourceMediaIds, undoMoves, failedCount, settings);
+
+  } finally {
+    isRunning.set(false);
+    cancelRequested.set(false);
+    resetProgress();
+  }
+}

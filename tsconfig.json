@@ -1,0 +1,29 @@
+{
+  "extends": "@tsconfig/svelte/tsconfig.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": false,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["vite-plugin-monkey/client"],
+    "baseUrl": ".",
+    "paths": {
+      "$api/*": ["src/api/*"],
+      "$core/*": ["src/core/*"],
+      "$stores/*": ["src/stores/*"],
+      "$types/*": ["src/types/*"],
+      "$utils/*": ["src/utils/*"],
+      "$components/*": ["src/components/*"],
+      "$animations/*": ["src/animations/*"],
+      "$actions/*": ["src/actions/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.svelte", "src/**/*.d.ts"]
+}

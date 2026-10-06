@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-label="「小明」AI B站收藏夹智能整理器">
+  <defs>
+    <style>
+      .t  { font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif; }
+      .mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+    </style>
+  </defs>
+
+  <!-- 纸面背景 -->
+  <rect x="0" y="0" width="1200" height="320" rx="18" fill="#fdfaf3"/>
+  <rect x="6" y="6" width="1188" height="308" rx="14" fill="none" stroke="#3a3125" stroke-width="2.5"/>
+  <!-- 纸张纹理：极淡的点阵 -->
+  <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+    <circle cx="1" cy="1" r="1" fill="#e7dcc5"/>
+  </pattern>
+  <rect x="8" y="8" width="1184" height="304" rx="12" fill="url(#dots)" opacity="0.5"/>
+
+  <!-- 左侧插图：文件夹 + 归档卡片（纯线条，扁平编辑部风格，无渐变/无 AI 元素） -->
+  <g transform="translate(56,70)">
+    <!-- 后挡板 -->
+    <path d="M2 26 L2 10 Q2 4 8 4 L58 4 Q64 4 66 10 L70 20 L182 20 Q188 20 188 26 L188 176 Q188 182 182 182 L8 182 Q2 182 2 176 Z"
+          fill="#f4ead3" stroke="#3a3125" stroke-width="3" stroke-linejoin="round"/>
+    <!-- 归档卡片 -->
+    <rect x="30" y="34" width="86" height="60" rx="5" fill="#fffdf8" stroke="#3a3125" stroke-width="2.5"/>
+    <line x1="42" y1="52" x2="104" y2="52" stroke="#b0742f" stroke-width="3"/>
+    <line x1="42" y1="66" x2="92" y2="66" stroke="#d6c9ad" stroke-width="3"/>
+    <line x1="42" y1="78" x2="100" y2="78" stroke="#d6c9ad" stroke-width="3"/>
+
+    <rect x="72" y="46" width="86" height="60" rx="5" fill="#fffdf8" stroke="#3a3125" stroke-width="2.5"/>
+    <line x1="84" y1="64" x2="146" y2="64" stroke="#b0742f" stroke-width="3"/>
+    <line x1="84" y1="78" x2="134" y2="78" stroke="#d6c9ad" stroke-width="3"/>
+    <line x1="84" y1="90" x2="142" y2="90" stroke="#d6c9ad" stroke-width="3"/>
+
+    <!-- 前挡板 -->
+    <path d="M2 166 Q2 160 8 160 L182 160 Q188 160 188 166 L188 176 Q188 182 182 182 L8 182 Q2 182 2 176 Z"
+          fill="#e9dcc0" stroke="#3a3125" stroke-width="3" stroke-linejoin="round"/>
+    <!-- 标签 -->
+    <rect x="18" y="163" width="46" height="16" rx="3" fill="#fb7299" stroke="#3a3125" stroke-width="2"/>
+  </g>
+
+  <!-- 标题 -->
+  <text class="t" x="300" y="120" font-size="46" font-weight="800" fill="#2f281d" letter-spacing="1">「小明」AI B站收藏夹智能整理器</text>
+  <!-- 副标题 -->
+  <text class="t" x="302" y="166" font-size="21" fill="#6b5f4a">把杂乱的收藏夹，自动整理得井井有条。</text>
+
+  <!-- 特性 Badge -->
+  <g class="t" font-size="16" font-weight="600">
+    <rect x="302" y="196" width="128" height="34" rx="17" fill="#eef3e4" stroke="#6f8f3f" stroke-width="2"/>
+    <circle cx="322" cy="213" r="5" fill="#6f8f3f"/>
+    <text x="336" y="219" fill="#3a3125">油猴脚本</text>
+
+    <rect x="444" y="196" width="158" height="34" rx="17" fill="#fdeef3" stroke="#fb7299" stroke-width="2"/>
+    <circle cx="464" cy="213" r="5" fill="#fb7299"/>
+    <text x="478" y="219" fill="#3a3125">AI 深度分类</text>
+
+    <rect x="616" y="196" width="140" height="34" rx="17" fill="#e8f5fb" stroke="#00aeec" stroke-width="2"/>
+    <circle cx="636" cy="213" r="5" fill="#00aeec"/>
+    <text x="650" y="219" fill="#3a3125">本地规则</text>
+
+    <rect x="770" y="196" width="176" height="34" rx="17" fill="#f6efe0" stroke="#b0742f" stroke-width="2"/>
+    <circle cx="790" cy="213" r="5" fill="#b0742f"/>
+    <text x="804" y="219" fill="#3a3125">预览确认后执行</text>
+  </g>
+
+  <!-- 右侧小字标识（竖排风格，克制） -->
+  <g class="mono" fill="#b8ab90" font-size="13" letter-spacing="2">
+    <text x="1030" y="120">BILIBILI</text>
+    <text x="1030" y="140">FAVORITES</text>
+    <text x="1030" y="160">ORGANIZER</text>
+  </g>
+
+  <!-- 右下角作者署名 -->
+  <text class="t" x="1030" y="288" font-size="15" fill="#9b8f79">by b站 小明同学鸭-</text>
+</svg>

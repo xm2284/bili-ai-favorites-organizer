@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-label="技术架构图">
+  <defs>
+    <style>
+      .t { font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif; }
+      .box { fill: #fffdf8; stroke: #3a3125; stroke-width: 2; }
+      .band { fill: #f6efe0; stroke: #d8c8a6; stroke-width: 1; }
+      .boxT { font-size: 16px; font-weight: 700; fill: #2f281d; }
+      .boxD { font-size: 12px; fill: #6b5f4a; }
+      .bandL { font-size: 17px; font-weight: 700; fill: #8a5a1f; }
+      .flow { stroke: #b0742f; stroke-width: 2.2; fill: none; }
+      .storeT { font-size: 14px; font-weight: 700; fill: #2f281d; }
+    </style>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="6.5" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 Z" fill="#b0742f"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="700" rx="16" fill="#fdfaf3"/>
+  <rect x="6" y="6" width="1188" height="688" rx="12" fill="none" stroke="#3a3125" stroke-width="2.5"/>
+
+  <text class="t" x="36" y="46" font-size="24" font-weight="800" fill="#2f281d">技术架构</text>
+  <text class="t" x="36" y="72" font-size="14" fill="#6b5f4a">分层模块与数据流 · Svelte 5 + Vite + TypeScript + vite-plugin-monkey</text>
+
+  <!-- 用户 -->
+  <rect class="box" x="329" y="88" width="320" height="40" rx="10"/>
+  <text class="t" x="489" y="113" text-anchor="middle" font-size="14" font-weight="700" fill="#2f281d">用户操作 · B 站收藏夹页面</text>
+  <line class="flow" x1="489" y1="128" x2="489" y2="164" marker-end="url(#ar)"/>
+
+  <!-- 界面层 -->
+  <text class="t bandL" x="36" y="158">界面层 · components（Svelte 5 组件）</text>
+  <g class="t">
+    <rect class="box" x="40"  y="170" width="170" height="66" rx="10"/>
+    <text class="boxT" x="125" y="197" text-anchor="middle">悬浮球</text>
+    <text class="boxD" x="125" y="217" text-anchor="middle">FloatButton</text>
+
+    <rect class="box" x="222" y="170" width="170" height="66" rx="10"/>
+    <text class="boxT" x="307" y="197" text-anchor="middle">主面板</text>
+    <text class="boxD" x="307" y="217" text-anchor="middle">Panel / Header</text>
+
+    <rect class="box" x="404" y="170" width="170" height="66" rx="10"/>
+    <text class="boxT" x="489" y="197" text-anchor="middle">设置 / 提示词</text>
+    <text class="boxD" x="489" y="217" text-anchor="middle">Settings / Prompt</text>
+
+    <rect class="box" x="586" y="170" width="170" height="66" rx="10"/>
+    <text class="boxT" x="671" y="197" text-anchor="middle">日志 / 进度</text>
+    <text class="boxD" x="671" y="217" text-anchor="middle">LogArea / ProgressBar</text>
+
+    <rect class="box" x="768" y="170" width="170" height="66" rx="10"/>
+    <text class="boxT" x="853" y="197" text-anchor="middle">按钮 / 弹窗</text>
+    <text class="boxD" x="853" y="217" text-anchor="middle">Actions / Modals</text>
+  </g>
+  <line class="flow" x1="489" y1="236" x2="489" y2="272" marker-end="url(#ar)"/>
+
+  <!-- 核心流程层 -->
+  <text class="t bandL" x="36" y="266">核心流程层 · core</text>
+  <g class="t">
+    <rect class="box" x="40"  y="278" width="170" height="66" rx="10"/>
+    <text class="boxT" x="125" y="305" text-anchor="middle">主流程编排</text>
+    <text class="boxD" x="125" y="325" text-anchor="middle">process.ts</text>
+
+    <rect class="box" x="222" y="278" width="170" height="66" rx="10"/>
+    <text class="boxT" x="307" y="305" text-anchor="middle">本地规则分类</text>
+    <text class="boxD" x="307" y="325" text-anchor="middle">local-classify.ts（无需网络）</text>
+
+    <rect class="box" x="404" y="278" width="170" height="66" rx="10"/>
+    <text class="boxT" x="489" y="305" text-anchor="middle">备份 / 恢复</text>
+    <text class="boxD" x="489" y="325" text-anchor="middle">backup.ts</text>
+
+    <rect class="box" x="586" y="278" width="170" height="66" rx="10"/>
+    <text class="boxT" x="671" y="305" text-anchor="middle">失效 / 查重</text>
+    <text class="boxD" x="671" y="325" text-anchor="middle">dead / duplicates</text>
+
+    <rect class="box" x="768" y="278" width="170" height="66" rx="10"/>
+    <text class="boxT" x="853" y="305" text-anchor="middle">撤销 / 历史</text>
+    <text class="boxD" x="853" y="325" text-anchor="middle">undo / history</text>
+  </g>
+  <line class="flow" x1="489" y1="344" x2="489" y2="380" marker-end="url(#ar)"/>
+
+  <!-- 接口层 -->
+  <text class="t bandL" x="36" y="374">接口层 · api</text>
+  <g class="t">
+    <rect class="box" x="40"  y="386" width="170" height="66" rx="10"/>
+    <text class="boxT" x="125" y="413" text-anchor="middle">AI 调用</text>
+    <text class="boxD" x="125" y="433" text-anchor="middle">ai-client / providers</text>
+
+    <rect class="box" x="222" y="386" width="170" height="66" rx="10"/>
+    <text class="boxT" x="307" y="413" text-anchor="middle">通用 HTTP</text>
+    <text class="boxD" x="307" y="433" text-anchor="middle">bilibili-http（限流重试）</text>
+
+    <rect class="box" x="404" y="386" width="170" height="66" rx="10"/>
+    <text class="boxT" x="489" y="413" text-anchor="middle">移动 / 复制</text>
+    <text class="boxD" x="489" y="433" text-anchor="middle">bilibili-videos</text>
+
+    <rect class="box" x="586" y="386" width="170" height="66" rx="10"/>
+    <text class="boxT" x="671" y="413" text-anchor="middle">收藏夹</text>
+    <text class="boxD" x="671" y="433" text-anchor="middle">bilibili-folders</text>
+
+    <rect class="box" x="768" y="386" width="170" height="66" rx="10"/>
+    <text class="boxT" x="853" y="413" text-anchor="middle">分页遍历</text>
+    <text class="boxD" x="853" y="433" text-anchor="middle">bilibili-scanner</text>
+  </g>
+
+  <!-- 外部 -->
+  <text class="t bandL" x="36" y="486">外部依赖</text>
+  <g class="t">
+    <rect class="box" x="40" y="498" width="170" height="56" rx="10"/>
+    <text class="boxT" x="125" y="522" text-anchor="middle">AI 服务商 API</text>
+    <text class="boxD" x="125" y="541" text-anchor="middle">DeepSeek / OpenAI 兼容…</text>
+
+    <rect class="box" x="300" y="498" width="650" height="56" rx="10"/>
+    <text class="boxT" x="625" y="522" text-anchor="middle">Bilibili API</text>
+    <text class="boxD" x="625" y="541" text-anchor="middle">收藏夹列表 · 视频分页 · 移动 / 复制 · 创建收藏夹</text>
+  </g>
+  <line class="flow" x1="125" y1="452" x2="125" y2="494" marker-end="url(#ar)"/>
+  <line class="flow" x1="307" y1="452" x2="307" y2="494" marker-end="url(#ar)"/>
+  <line class="flow" x1="489" y1="452" x2="489" y2="494" marker-end="url(#ar)"/>
+  <line class="flow" x1="671" y1="452" x2="671" y2="494" marker-end="url(#ar)"/>
+  <line class="flow" x1="853" y1="452" x2="853" y2="494" marker-end="url(#ar)"/>
+
+  <!-- 状态层（右侧贯穿） -->
+  <text class="t bandL" x="966" y="158">状态层 · stores</text>
+  <rect class="band" x="966" y="170" width="198" height="282" rx="12"/>
+  <g class="t">
+    <rect class="box" x="982" y="184" width="166" height="52" rx="9"/>
+    <text class="storeT" x="1065" y="206" text-anchor="middle">settings</text>
+    <text class="boxD" x="1065" y="224" text-anchor="middle">设置持久化 (GM)</text>
+
+    <rect class="box" x="982" y="246" width="166" height="52" rx="9"/>
+    <text class="storeT" x="1065" y="268" text-anchor="middle">state</text>
+    <text class="boxD" x="1065" y="286" text-anchor="middle">日志 / 进度 / 运行态</text>
+
+    <rect class="box" x="982" y="308" width="166" height="52" rx="9"/>
+    <text class="storeT" x="1065" y="330" text-anchor="middle">modal-bridge</text>
+    <text class="boxD" x="1065" y="348" text-anchor="middle">Promise 弹窗桥</text>
+
+    <rect class="box" x="982" y="370" width="166" height="52" rx="9"/>
+    <text class="storeT" x="1065" y="392" text-anchor="middle">theme</text>
+    <text class="boxD" x="1065" y="410" text-anchor="middle">暖色纸质主题</text>
+  </g>
+  <line x1="938" y1="203" x2="982" y2="210" stroke="#b0742f" stroke-width="1.6" stroke-dasharray="5 4"/>
+  <line x1="938" y1="311" x2="982" y2="332" stroke="#b0742f" stroke-width="1.6" stroke-dasharray="5 4"/>
+
+  <text class="t" x="36" y="596" font-size="13" fill="#9b8f79">说明：界面层订阅状态层；核心流程层调用接口层；接口层请求外部依赖。虚线表示状态订阅关系。</text>
+</svg>

@@ -1,0 +1,360 @@
+/*
+ * CSS Design Tokens — 暖色纸质 / 米色主题 (Warm Paper / Beige)
+ * Defined on .bfao-app (not :root) because `all: initial` resets custom properties.
+ * Dark theme via [data-theme="dark"] attribute set by App.svelte.
+ */
+
+/* ==================== Light Theme (Warm Paper, default) ==================== */
+.bfao-app {
+  /* Backgrounds */
+  --ai-bg: #fdfaf3;
+  --ai-bg-secondary: #f7f0e2;
+  --ai-bg-tertiary: #efe5d1;
+  --ai-bg-hover: rgba(150, 110, 55, 0.06);
+  --ai-input-bg: #fffdf8;
+
+  /* Text */
+  --ai-text: #3a3125;
+  --ai-text-secondary: #5d5240;
+  --ai-text-muted: #9b8f79;
+
+  /* Borders */
+  --ai-border: #e3d6bd;
+  --ai-border-light: #ece1cc;
+  --ai-border-lighter: #f3ebda;
+
+  /* Primary — warm ochre / kraft brown */
+  --ai-primary: #b0742f;
+  --ai-primary-light: #d6a868;
+  --ai-primary-bg: rgba(176, 116, 47, 0.08);
+  --ai-primary-rgb: 176, 116, 47;  /* raw RGB for rgba(var(--ai-primary-rgb), alpha) pattern */
+  --ai-primary-shadow: rgba(176, 116, 47, 0.16);
+
+  /* Gradient accent */
+  --ai-gradient-accent: #cb8b45;
+
+  /* Success — warm olive green */
+  --ai-success: #6f8f3f;
+  --ai-success-rgb: 111, 143, 63;
+  --ai-success-dark: #5b7833;
+  --ai-success-light: #8fae5c;
+  --ai-success-lighter: #b6cc8b;
+  --ai-success-bg: rgba(111, 143, 63, 0.12);
+
+  /* Error — warm brick red */
+  --ai-error: #bb4a34;
+  --ai-error-rgb: 187, 74, 52;
+  --ai-error-alt: #c25a44;
+  --ai-error-alt-rgb: 194, 90, 68;
+  --ai-error-hover: #a83f2a;
+
+  /* Warning — warm amber */
+  --ai-warning: #c08a24;
+  --ai-warning-rgb: 192, 138, 36;
+  --ai-warning-dark: #a6741a;
+  --ai-warning-bg: rgba(192, 138, 36, 0.12);
+
+  /* Info — muted brown-gray */
+  --ai-info: #8a7a5c;
+
+  /* Overlay */
+  --ai-backdrop: rgba(58, 49, 37, 0.55);
+
+  /* Selection */
+  --ai-selection-bg: rgba(176, 116, 47, 0.22);
+
+  /* Shadows — soft warm, paper-like */
+  --ai-shadow-md: 0 8px 28px rgba(90, 68, 38, 0.14);
+  --ai-shadow-lg: 0 24px 60px rgba(90, 68, 38, 0.16), 0 10px 26px rgba(90, 68, 38, 0.1);
+  --ai-shadow-modal: 0 40px 100px rgba(90, 68, 38, 0.24), 0 18px 42px rgba(90, 68, 38, 0.14);
+
+  /* Depth — inset shadow for recessed areas */
+  --ai-shadow-inset: inset 0 1px 3px rgba(90, 68, 38, 0.08);
+
+  /* Divider — gradient separator line */
+  --ai-divider-gradient: linear-gradient(90deg, transparent, var(--ai-primary-light), transparent);
+
+  /* Radial pulse — expanding ring for interaction feedback */
+  --ai-pulse-spread-color: rgba(176, 116, 47, 0.35);
+
+  /* Selected item inner glow */
+  --ai-glow-selected: inset 0 0 12px rgba(176, 116, 47, 0.1);
+
+  /* Breath glow — subtle breathing box-shadow for alive states */
+  --ai-glow-breath: 0 0 10px rgba(176, 116, 47, 0.14);
+  --ai-glow-breath-strong: 0 0 18px rgba(176, 116, 47, 0.22);
+
+  /* Shimmer sweep — translucent highlight for badge/label sweeps */
+  --ai-shimmer-color: rgba(255, 253, 248, 0.5);
+
+  /* Scroll indicator glow — subtle brand glow for progress bars */
+  --ai-indicator-glow: 0 0 8px rgba(176, 116, 47, 0.28), 0 0 3px rgba(176, 116, 47, 0.16);
+
+  /* Timer shimmer — translucent sweep for countdown bars */
+  --ai-timer-shimmer: rgba(255, 253, 248, 0.55);
+
+  /* Danger glow — warning halo for destructive actions */
+  --ai-glow-danger: 0 0 14px rgba(187, 74, 52, 0.25), 0 0 4px rgba(187, 74, 52, 0.15);
+
+  /* Field active glow — inset glow when input field is focused */
+  --ai-field-active-glow: inset 0 0 8px rgba(176, 116, 47, 0.08), 0 0 0 1px rgba(176, 116, 47, 0.1);
+
+  /* Title glow — synchronized with shimmer sweep */
+  --ai-glow-title: 0 0 20px rgba(255, 253, 248, 0.2);
+
+  /* Focus ripple — expanding ring color for input activation */
+  --ai-focus-ripple: rgba(176, 116, 47, 0.2);
+
+  /* Icon breath glow — ambient glow for active accordion icons */
+  --ai-glow-icon-breath: 0 0 10px rgba(176, 116, 47, 0.22);
+
+  /* Danger ambient — subtle danger background for dead video groups */
+  --ai-danger-ambient: rgba(187, 74, 52, 0.1);
+
+  /* Control hover glow — unified halo for form control hover states */
+  --ai-glow-control-hover: 0 0 12px rgba(176, 116, 47, 0.16);
+
+  /* Border active glow — bright border color for active/toggled states */
+  --ai-border-active-glow: rgba(176, 116, 47, 0.38);
+
+  /* Text hover glow — ambient text shadow for hoverable labels */
+  --ai-glow-text-hover: 0 0 8px rgba(176, 116, 47, 0.22);
+
+  /* Shimmer overlay — translucent sweep for processing states */
+  --ai-shimmer-overlay: rgba(255, 253, 248, 0.1);
+
+  /* Danger text glow — text shadow for danger values on hover */
+  --ai-glow-danger-text: 0 0 10px rgba(187, 74, 52, 0.25);
+
+  /* Stripe overlay — translucent stripe color for processing states */
+  --ai-stripe-overlay: rgba(255, 253, 248, 0.14);
+
+  /* Scroll depth shadow — intensified shadow when content is scrolled */
+  --ai-shadow-depth-scroll: 0 32px 76px rgba(90, 68, 38, 0.18);
+
+  /* Active row glow — ambient micro-glow for enabled toggle rows */
+  --ai-glow-active-row: 0 0 8px rgba(176, 116, 47, 0.12);
+}
+
+/* ==================== Dark Theme (Warm Coffee / Sepia) ==================== */
+.bfao-app[data-theme="dark"] {
+  /* Backgrounds */
+  --ai-bg: #241f18;
+  --ai-bg-secondary: #2c261d;
+  --ai-bg-tertiary: #362e22;
+  --ai-bg-hover: rgba(214, 168, 104, 0.08);
+  --ai-input-bg: #2c261d;
+
+  /* Text */
+  --ai-text: #ece3d3;
+  --ai-text-secondary: #cabda6;
+  --ai-text-muted: #93876f;
+
+  /* Borders */
+  --ai-border: #493d2c;
+  --ai-border-light: #3b3225;
+  --ai-border-lighter: #322a1e;
+
+  /* Primary — warm honey ochre */
+  --ai-primary: #d6a868;
+  --ai-primary-light: #e3bd86;
+  --ai-primary-bg: rgba(214, 168, 104, 0.12);
+  --ai-primary-rgb: 214, 168, 104;
+  --ai-primary-shadow: rgba(214, 168, 104, 0.22);
+
+  /* Gradient accent */
+  --ai-gradient-accent: #e0b47c;
+
+  /* Success */
+  --ai-success: #a3c46a;
+  --ai-success-rgb: 163, 196, 106;
+  --ai-success-dark: #8ba856;
+  --ai-success-light: #bcd68c;
+  --ai-success-lighter: #d3e5b3;
+  --ai-success-bg: rgba(163, 196, 106, 0.16);
+
+  /* Error */
+  --ai-error: #e08a76;
+  --ai-error-rgb: 224, 138, 118;
+  --ai-error-alt: #e59a88;
+  --ai-error-alt-rgb: 229, 154, 136;
+  --ai-error-hover: #e8a08e;
+
+  /* Warning */
+  --ai-warning: #e0b45c;
+  --ai-warning-rgb: 224, 180, 92;
+  --ai-warning-dark: #c99a3f;
+  --ai-warning-bg: rgba(224, 180, 92, 0.16);
+
+  /* Info */
+  --ai-info: #c3b393;
+
+  /* Overlay */
+  --ai-backdrop: rgba(18, 14, 9, 0.72);
+
+  /* Selection */
+  --ai-selection-bg: rgba(214, 168, 104, 0.3);
+
+  /* Shadows — darker for dark mode */
+  --ai-shadow-md: 0 8px 32px rgba(0, 0, 0, 0.32);
+  --ai-shadow-lg: 0 24px 68px rgba(0, 0, 0, 0.38), 0 10px 28px rgba(0, 0, 0, 0.22);
+  --ai-shadow-modal: 0 44px 110px rgba(0, 0, 0, 0.52), 0 18px 44px rgba(0, 0, 0, 0.32);
+
+  /* Depth — stronger inset for dark mode */
+  --ai-shadow-inset: inset 0 1px 3px rgba(0, 0, 0, 0.18);
+
+  /* Divider */
+  --ai-divider-gradient: linear-gradient(90deg, transparent, var(--ai-primary-light), transparent);
+
+  /* Radial pulse */
+  --ai-pulse-spread-color: rgba(214, 168, 104, 0.4);
+
+  /* Selected item inner glow */
+  --ai-glow-selected: inset 0 0 12px rgba(214, 168, 104, 0.14);
+
+  /* Breath glow */
+  --ai-glow-breath: 0 0 10px rgba(214, 168, 104, 0.2);
+  --ai-glow-breath-strong: 0 0 18px rgba(214, 168, 104, 0.3);
+
+  /* Shimmer sweep */
+  --ai-shimmer-color: rgba(255, 255, 255, 0.18);
+
+  /* Scroll indicator glow */
+  --ai-indicator-glow: 0 0 8px rgba(214, 168, 104, 0.38), 0 0 3px rgba(214, 168, 104, 0.22);
+
+  /* Timer shimmer */
+  --ai-timer-shimmer: rgba(255, 255, 255, 0.32);
+
+  /* Danger glow */
+  --ai-glow-danger: 0 0 14px rgba(224, 138, 118, 0.3), 0 0 4px rgba(224, 138, 118, 0.2);
+
+  /* Field active glow */
+  --ai-field-active-glow: inset 0 0 8px rgba(214, 168, 104, 0.12), 0 0 0 1px rgba(214, 168, 104, 0.14);
+
+  /* Title glow */
+  --ai-glow-title: 0 0 20px rgba(255, 255, 255, 0.18);
+
+  /* Focus ripple */
+  --ai-focus-ripple: rgba(214, 168, 104, 0.25);
+
+  /* Icon breath glow */
+  --ai-glow-icon-breath: 0 0 10px rgba(214, 168, 104, 0.3);
+
+  /* Danger ambient */
+  --ai-danger-ambient: rgba(224, 138, 118, 0.14);
+
+  /* Control hover glow */
+  --ai-glow-control-hover: 0 0 12px rgba(214, 168, 104, 0.24);
+
+  /* Border active glow */
+  --ai-border-active-glow: rgba(214, 168, 104, 0.45);
+
+  /* Text hover glow */
+  --ai-glow-text-hover: 0 0 8px rgba(214, 168, 104, 0.3);
+
+  /* Shimmer overlay */
+  --ai-shimmer-overlay: rgba(255, 255, 255, 0.05);
+
+  /* Danger text glow */
+  --ai-glow-danger-text: 0 0 10px rgba(224, 138, 118, 0.35);
+
+  /* Stripe overlay */
+  --ai-stripe-overlay: rgba(255, 255, 255, 0.06);
+
+  /* Scroll depth shadow */
+  --ai-shadow-depth-scroll: 0 32px 80px rgba(0, 0, 0, 0.4);
+
+  /* Active row glow */
+  --ai-glow-active-row: 0 0 8px rgba(214, 168, 104, 0.16);
+}
+
+/* ==================== Hidden Scrollbar — scroll still works, bar hidden ==================== */
+.bfao-app *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+/* Firefox */
+.bfao-app * {
+  scrollbar-width: none;
+}
+
+/* ==================== Smooth Theme Color Transitions ==================== */
+/* Scoped to theme-change only: [data-theme] change triggers transitions.
+   Applied via attribute selector so it doesn't override component transitions. */
+.bfao-app[data-theme] {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ==================== Keyboard Focus Ring ==================== */
+.bfao-app button:focus-visible,
+.bfao-app [role="button"]:focus-visible {
+  outline: 2px solid var(--ai-primary);
+  outline-offset: 2px;
+  animation: focusRingIn 0.2s cubic-bezier(0.2, 0.98, 0.28, 1) both;
+}
+.bfao-app button:focus:not(:focus-visible),
+.bfao-app [role="button"]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+@keyframes focusRingIn {
+  from { outline-offset: 0px; outline-color: transparent; }
+  to { outline-offset: 2px; outline-color: var(--ai-primary); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bfao-app[data-theme] {
+    transition: none;
+  }
+  .bfao-app button:focus-visible,
+  .bfao-app [role="button"]:focus-visible {
+    animation: none;
+  }
+}
+
+/* ==================== 精简动效：关闭常驻/环境类循环动画，保留功能性反馈 ==================== */
+.bfao-app .cursor-spotlight {
+  display: none !important;
+}
+.bfao-app .nebula-drift {
+  display: none !important;
+}
+.bfao-app .progress-cat {
+  display: none !important;
+}
+.bfao-app .header,
+.bfao-app .header-title > span:first-child,
+.bfao-app .version,
+.bfao-app .panel,
+.bfao-app .log-cat,
+.bfao-app .backdrop::before,
+.bfao-app .modal-header,
+.bfao-app .modal-header::after {
+  animation: none !important;
+}
+.bfao-app .float-btn::before {
+  animation: none !important;
+  opacity: 0.5;
+}
+
+/* ==================== 全局字号放大（整体更易读） ==================== */
+.bfao-app .header-title { font-size: 15.5px !important; }
+.bfao-app .header-title .version { font-size: 11px !important; }
+.bfao-app .bfao-label { font-size: 13.5px !important; }
+.bfao-app .bfao-input,
+.bfao-app .bfao-select { font-size: 13px !important; }
+.bfao-app .bfao-checkbox-label { font-size: 13px !important; }
+.bfao-app .toggle-row { font-size: 13.5px !important; }
+.bfao-app .mode-title { font-size: 13.5px !important; }
+.bfao-app .mode-desc { font-size: 11.5px !important; }
+.bfao-app .local-hint { font-size: 11.5px !important; }
+.bfao-app .guide-title { font-size: 14px !important; }
+.bfao-app .guide-steps { font-size: 13px !important; }
+.bfao-app .guide-item { font-size: 12.5px !important; }
+.bfao-app .faq-q { font-size: 14px !important; }
+.bfao-app .faq-a { font-size: 13px !important; }
+.bfao-app .help-footer { font-size: 12px !important; }
+.bfao-app .credit-line { font-size: 12px !important; }
+.bfao-app .credit-line.muted { font-size: 11px !important; }
+.bfao-app .log-area { font-size: 12.5px !important; }
+.bfao-app .log-msg { font-size: 12.5px !important; }
